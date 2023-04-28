@@ -1,21 +1,30 @@
-import * as THREE from 'https://cdn.skypack.dev/three@0.136';
-
+import * as THREE from "https://cdn.skypack.dev/three@0.136";
 
 class SimonDevGLSLCourse {
-  constructor() {
-  }
+  constructor() {}
 
   async initialize() {
     this.threejs_ = new THREE.WebGLRenderer();
     document.body.appendChild(this.threejs_.domElement);
 
-    window.addEventListener('resize', () => {
-      this.onWindowResize_();
-    }, false);
+    window.addEventListener(
+      "resize",
+      () => {
+        this.onWindowResize_();
+      },
+      false
+    );
 
     this.scene_ = new THREE.Scene();
 
-    this.camera_ = new THREE.OrthographicCamera(0, 1, 1, 0, 0.1, 1000);
+    this.camera_ = new THREE.OrthographicCamera(
+      0,
+      1,
+      1,
+      0,
+      0.1,
+      1000
+    );
     this.camera_.position.set(0, 0, 1);
 
     await this.setupProject_();
@@ -26,19 +35,21 @@ class SimonDevGLSLCourse {
   }
 
   async setupProject_() {
-    const vsh = await fetch('./shaders/vertex-shader.glsl');
-    const fsh = await fetch('./shaders/fragment-shader.glsl');
+    const vsh = await fetch("./shaders/vertex-shader.glsl");
+    const fsh = await fetch(
+      "./shaders/fragment-shader.glsl"
+    );
 
     const loader = new THREE.TextureLoader();
-    const dogTexture = loader.load('./textures/dog.jpg');
+    const dogTexture = loader.load("./textures/dog.jpg");
 
     const material = new THREE.ShaderMaterial({
       uniforms: {
         diffuse1: { value: dogTexture },
-        time: {value: 0.0},
+        time: { value: 0.0 },
       },
       vertexShader: await vsh.text(),
-      fragmentShader: await fsh.text()
+      fragmentShader: await fsh.text(),
     });
 
     this.material_ = material;
@@ -52,12 +63,17 @@ class SimonDevGLSLCourse {
   }
 
   onWindowResize_() {
-    this.threejs_.setSize(window.innerWidth, window.innerHeight);
+    this.threejs_.setSize(
+      window.innerWidth,
+      window.innerHeight
+    );
   }
 
   raf_() {
     requestAnimationFrame((t) => {
+      // * t is the current time
       if (this.previousRAF_ === null) {
+        // * increase the time
         this.previousRAF_ = t;
       }
 
@@ -68,17 +84,18 @@ class SimonDevGLSLCourse {
     });
   }
 
+  // * after times
   step_(timeElapsed) {
     const timeElapsedS = timeElapsed * 0.001;
-    this.totalTime_ += timeElapsedS;
+    this.totalTime_ += timeElapsedS; // * s
+    // * update shader uniform
     this.material_.uniforms.time.value = this.totalTime_;
   }
 }
 
-
 let APP_ = null;
 
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener("DOMContentLoaded", async () => {
   APP_ = new SimonDevGLSLCourse();
   await APP_.initialize();
 });
