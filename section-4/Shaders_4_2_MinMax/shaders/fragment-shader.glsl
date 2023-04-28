@@ -6,8 +6,10 @@ void main() {
 
   float value1 = vUvs.x;
   // float value2 = smoothstep(0.0, 1.0, vUvs.x);
-  float value2 = clamp(vUvs.x, 0.25, 0.75);
-
+  // float value2 = min(vUvs.x, 0.25);
+  // float value2 = max(vUvs.x, 0.75);
+  float value2 = clamp(vUvs.x,0.25,0.75);
+  
   float line = smoothstep(0.0, 0.005, abs(vUvs.y - 0.5));
   float linearLine = smoothstep(0.0, 0.0075, abs(vUvs.y - mix(0.5, 1.0, value1)));
   float smoothLine = smoothstep(0.0, 0.0075, abs(vUvs.y - mix(0.0, 0.5, value2)));
@@ -19,6 +21,7 @@ void main() {
   if (vUvs.y > 0.5) {
     colour = mix(red, blue, value1);
   } else {
+    // * 因为 max ，a就起码大于0.75,就很接近blue, 反之 min red clamp就上下都限制了， 0.25 - 0.75 linear
     colour = mix(red, blue, value2);
   }
 
