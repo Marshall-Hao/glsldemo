@@ -29,7 +29,7 @@ void main() {
 
   // float t1 = sin(vUvs.x * 1000.0);
   // * 三角函数 ，要shift就是调动 sin(kx-b) 的b值 b一直在变，那就一直shift
-  float t2 = sin(vUvs.y * 400.0 - time * 2.0);
+  float t2 = cos(vUvs.y * 400.0 - time * 2.0);
   // t1 = remap(t1,-1.0, 1.0, 0.5,1.0) * t;
   t2 = remap(t2,-1.0, 1.0, 0.5,1.0) ;
   // * time 一开始是0 慢慢变为1

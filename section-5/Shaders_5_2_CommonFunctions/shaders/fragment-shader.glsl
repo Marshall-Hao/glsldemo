@@ -6,6 +6,7 @@ void main() {
   vec3 colour = vec3(0.0);
 
   float value1 = vUvs.x;
+  // * 画方程
   float value2 = vUvs.x * (1.0 - vUvs.x) * 4.0;
 
   float line = smoothstep(0.0, 0.005, abs(vUvs.y - 0.5));
@@ -29,4 +30,5 @@ void main() {
   colour = mix(white, colour, smoothLine);
 
   gl_FragColor = vec4(colour, 1.0);
+  // * glsl vector operations all have
 }
