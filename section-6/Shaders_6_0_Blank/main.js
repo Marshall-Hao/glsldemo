@@ -65,15 +65,19 @@ class SimonDevGLSLCourse {
       fragmentShader: await fsh.text(),
     });
 
-    const loader = new GLTFLoader();
-    loader.setPath("./resources/");
-    loader.load("suzanne.glb", (gltf) => {
-      // * travers implet every child and child of child
-      gltf.scene.traverse((c) => {
-        c.material = material;
-      });
-      this.scene_.add(gltf.scene);
-    });
+    // const loader = new GLTFLoader();
+    // loader.setPath("./resources/");
+    // loader.load("suzanne.glb", (gltf) => {
+    //   // * travers implet every child and child of child
+    //   gltf.scene.traverse((c) => {
+    //     c.material = material;
+    //   });
+    //   this.scene_.add(gltf.scene);
+    // });
+
+    const geometry = new THREE.IcosahedronGeometry(1, 128);
+    const mesh = new THREE.Mesh(geometry, material);
+    this.scene_.add(mesh);
   }
 
   onWindowResize_() {
