@@ -54,7 +54,9 @@ class SimonDevGLSLCourse {
     // * ClampToEdgeWrapping 边缘极限拉伸 stretch out
     dogTexture.wrapS = THREE.RepeatWrapping;
     dogTexture.wrapT = THREE.RepeatWrapping;
-    dogTexture.magFilter = THREE.NearestFilter;
+    // *  linear Filtering ( will calculate the linear avg of the nears 4 pixels color) , nearest will just find the most close one, more perf good
+    // * mipmap
+    dogTexture.magFilter = THREE.LinearFilter;
     const overlayTexture = loader.load(
       "./textures/overlay.png"
     );

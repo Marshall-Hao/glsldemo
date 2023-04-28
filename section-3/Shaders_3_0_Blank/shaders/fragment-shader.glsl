@@ -15,7 +15,7 @@ void main(void) {
   // gl_FragColor = mix(diffuseSample,overlaySample,overlaySample.w) ;
   // * addressing mode
   // * zoom in
-  vec2 uvs = vUvs / 10.0;
+  vec2 uvs = vUvs * 2.0;
   vec4 diffuseSample = texture2D(diffuse,uvs);
   gl_FragColor = diffuseSample;
 }
