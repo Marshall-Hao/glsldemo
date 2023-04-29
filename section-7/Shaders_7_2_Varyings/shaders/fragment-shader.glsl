@@ -14,34 +14,41 @@ float remap(float v, float inMin, float inMax, float outMin, float outMax) {
   return mix(outMin, outMax, t);
 }
 
+vec3 red = vec3(1.0, 0.0, 0.0);
+vec3 blue = vec3(0.0, 0.0, 1.0);
+vec3 yellow = vec3(1.0, 1.0, 0.0);
 void main() {
   vec3 modelColour = vColour.xyz;
 
-  vec3 red = vec3(1.0, 0.0, 0.0);
-  vec3 blue = vec3(0.0, 0.0, 1.0);
-  vec3 yellow = vec3(1.0, 1.0, 0.0);
-
   float value1 = vColour.w;
-  float line1 = smoothstep(
-      0.003, 0.004, abs(vPosition.y - mix(-0.5, 0.0, value1)));
-  modelColour = mix(yellow, modelColour, line1);
 
-  // Fragment shader part
+  float line1 = smoothstep(0.003,0.004,abs(vPosition.y - mix(-0.5,0.0,value1)));
+
+  modelColour = mix(yellow,modelColour,line1);
+
+  // * fragment shader part
+  //* 到模型上面来的话， origin 就成为 中心点了 不是uv坐标系了
   if (vPosition.y > 0.0) {
+    vec3 red = vec3(1.0, 0.0, 0.0);
+    vec3 blue = vec3(0.0, 0.0, 1.0);
+
+
     float t = remap(vPosition.x, -0.5, 0.5, 0.0, 1.0);
-    t = pow(t, 2.0);
+    t = pow(t,2.0);
     modelColour = mix(red, blue, t);
 
     float value2 = t;
-    float line2 = smoothstep(
-        0.003, 0.004, abs(vPosition.y - mix(0.0, 0.5, value2)));
-    modelColour = mix(yellow, modelColour, line2);
+
+    float line2 = smoothstep(0.003,0.004,abs(vPosition.y - mix(0.0,0.5,value2)));
+
+    modelColour = mix(yellow,modelColour,line2);
   }
 
-  // Dividing line
-  float middleLine = smoothstep(0.004, 0.005, abs(vPosition.y));
-  modelColour = mix(vec3(0.0), modelColour, middleLine);
+  // * dividing line
+  float middleLine = smoothstep(0.004,0.005,abs(vPosition.y));
+  modelColour = mix(vec3(0.0), modelColour,middleLine);
 
+  // * lighting
   vec3 lighting = vec3(0.0);
 
   vec3 normal = normalize(vNormal);
