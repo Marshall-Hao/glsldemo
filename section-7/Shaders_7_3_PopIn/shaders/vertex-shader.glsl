@@ -45,7 +45,9 @@ float easeInOutBounce(float x) {
 void main() {	
   vec3 localSpacePosition = position;
 
-  localSpacePosition *= easeOutBounce(clamp(time - 4.0, 0.0, 1.0));
+
+  // * scale 回缩状态
+  localSpacePosition *= easeInOutBounce(clamp(time - 4.0, 0.0, 1.0));
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(localSpacePosition, 1.0);
   vNormal = (modelMatrix * vec4(normal, 0.0)).xyz;

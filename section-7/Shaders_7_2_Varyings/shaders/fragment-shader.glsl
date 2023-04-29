@@ -27,7 +27,7 @@ void main() {
   modelColour = mix(yellow,modelColour,line1);
 
   // * fragment shader part
-  //* 到模型上面来的话， origin 就成为 中心点了 不是uv坐标系了
+  //* vertex 到模型上面来的话， origin 就成为 中心点了 不是uv坐标系了
   if (vPosition.y > 0.0) {
     vec3 red = vec3(1.0, 0.0, 0.0);
     vec3 blue = vec3(0.0, 0.0, 1.0);

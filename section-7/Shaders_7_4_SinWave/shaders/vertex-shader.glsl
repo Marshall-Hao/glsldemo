@@ -21,7 +21,7 @@ void main() {
 
   float t = sin(localSpacePosition.y * 20.0 + time * 10.0);
   t = remap(t, -1.0, 1.0, 0.0, 0.2);
-  localSpacePosition += normal * t;
+  localSpacePosition +=  normal * t;
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(localSpacePosition, 1.0);
   vNormal = (modelMatrix * vec4(normal, 0.0)).xyz;

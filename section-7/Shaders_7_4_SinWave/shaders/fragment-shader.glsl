@@ -19,6 +19,7 @@ void main() {
   vec3 lighting = vec3(0.0);
 
   // vec3 normal = normalize(vNormal);
+  // * get the phase normal
   vec3 normal = normalize(
       cross(
           dFdx(vPosition.xyz),
