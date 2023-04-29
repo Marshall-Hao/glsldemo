@@ -62,6 +62,7 @@ class SimonDevGLSLCourse {
     const material = new THREE.ShaderMaterial({
       uniforms: {
         specMap: {
+          // * uniform value will be the cube env texture
           value: this.scene_.background,
         },
       },

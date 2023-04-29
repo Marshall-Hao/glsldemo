@@ -30,5 +30,5 @@ void main() {
   colour = mix(white, colour, smoothLine);
 
   gl_FragColor = vec4(colour, 1.0);
-  // * glsl vector operations all have
+  // * glsl vector operations all
 }

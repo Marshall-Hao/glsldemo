@@ -1,5 +1,7 @@
 varying vec3 vNormal;
 varying vec3 vPosition;
+// * 这个类型 因为是cube
+uniform samplerCube specMap;
 
 float inverseLerp(float v, float minValue, float maxValue) {
   return (v - minValue) / (maxValue - minValue);
@@ -20,7 +22,7 @@ vec3 linearTosRGB(vec3 value ) {
 }
 
 void main() {
-  vec3 baseColour = vec3(0.5);
+  vec3 baseColour = vec3(0.25,0,0);
   vec3 lighting = vec3(0.0);
   vec3 normal = normalize(vNormal);  
   
@@ -57,13 +59,28 @@ void main() {
   phoneValue = pow(phoneValue,32.0);
 
   vec3 specular = vec3(phoneValue);
+  
+  
+  // * IBL specular env mapping light
+  // * 人视线 在 点normal 向量的投影 , 也就是direction
+  vec3 iblCoord = normalize(reflect(-viewDir,normal));
+  // * sample from it useing a direction vector
+  vec3 iblSample = textureCube(specMap,iblCoord).xyz;
+
+  specular += iblSample * 0.5;
+
+  // * Fresnel (nice reflection)
+  float fresnel =1.0 - max(0.0, dot(viewDir,normal));
+  fresnel = pow(fresnel,2.0);
+  // vec3 colour = vec3(fresnel);
+  specular *= fresnel;
+
+
   // * intensity
   lighting = ambient * 0.0 + hemi * 0.0 + diffuse * 1.0;
   // * 单纯x1*x2 y1*y2 + specular hightlight
   vec3 colour  = baseColour * lighting + specular;
-  
 
-  
   // * 更真实
   // colour = linearTosRGB(colour);
   // * pow gamma 2.2
