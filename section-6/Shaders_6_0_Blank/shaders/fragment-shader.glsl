@@ -1,5 +1,5 @@
 varying vec3 vNormal;
-
+varying vec3 vPosition;
 
 float inverseLerp(float v, float minValue, float maxValue) {
   return (v - minValue) / (maxValue - minValue);
@@ -24,6 +24,10 @@ void main() {
   vec3 lighting = vec3(0.0);
   vec3 normal = normalize(vNormal);  
   
+  // * 拿到 view的位置， cameraPosition from 3js internally , 归一
+  vec3 viewDir = normalize(cameraPosition - vPosition);
+
+
   // * ambient
   vec3 ambient = vec3(0.5);
 
@@ -45,11 +49,21 @@ void main() {
   vec3 diffuse = lightColour * dp;
 
 
+  // * Phone specular
+  // * 拿到光线在每个uv 垂直点的 投影 归u一
+  vec3 r = normalize(reflect(-lightDir,normal ));
+  // *中间的夹角光强度 abstract
+  float phoneValue = max(0.0,dot(viewDir,r));
+  phoneValue = pow(phoneValue,32.0);
+
+  vec3 specular = vec3(phoneValue);
   // * intensity
   lighting = ambient * 0.0 + hemi * 0.0 + diffuse * 1.0;
-  // * 单纯x1*x2 y1*y2
-  vec3 colour  = baseColour * lighting;
+  // * 单纯x1*x2 y1*y2 + specular hightlight
+  vec3 colour  = baseColour * lighting + specular;
+  
 
+  
   // * 更真实
   // colour = linearTosRGB(colour);
   // * pow gamma 2.2
