@@ -99,6 +99,19 @@ float sdfMoon(vec2 pixelCoords) {
   return d;
 }
 
+float sdStar5(in vec2 p, in float r, in float rf)
+{
+    const vec2 k1 = vec2(0.809016994375, -0.587785252292);
+    const vec2 k2 = vec2(-k1.x,k1.y);
+    p.x = abs(p.x);
+    p -= 2.0*max(dot(k1,p),0.0)*k1;
+    p -= 2.0*max(dot(k2,p),0.0)*k2;
+    p.x = abs(p.x);
+    p.y -= r;
+    vec2 ba = rf*vec2(-k1.y,k1.x) - vec2(0,1);
+    float h = clamp( dot(p,ba)/dot(ba,ba), 0.0, r );
+    return length(p-ba*h) * sign(p.y*ba.x-p.x*ba.y);
+}
 
 float hash(vec2 v) {
   // * fake random
@@ -208,6 +221,57 @@ void main() {
 
     float moonGlow = sdfMoon(moonPos);
     colour += 0.1 * mix(vec3(1.0),vec3(0.0), smoothstep(-10.0,5.0, moonGlow));
+  }
+
+  
+
+  // * stars
+  const float NUM_STARS = 24.0;
+  for (float i = 0.0; i < NUM_STARS; i+=1.0) {
+    float hashSample = hash(vec2(i * 13.0)) * 0.5 + 0.5;
+
+    // * 一天的时间没过一半就还是百分之0
+    float t = saturate(
+      inverseLerp(dayTime, dayLength * 0.5, dayLength * 0.5 + 1.5)
+    );
+
+    float fade = 0.0;
+    if (dayTime > dayLength * 0.9) {
+      // * 过了那个时间点 才会从0 往上走·
+      fade = saturate(
+        inverseLerp(
+          dayTime - hashSample * 0.25,
+          dayLength * 0.9,
+          dayLength * 0.95
+        )
+      );
+    }
+
+  // * more hash random
+    float size = mix(2.0,1.0,hash(vec2(i,i + 1.0)));
+    // * 加上混乱的y值
+    vec2 offset = vec2(i * 100.0, 0.0) + 200.0 * hash(vec2(i));
+    // * 百分之0 那就一直吊在600 高处那
+    offset += mix(vec2(0.0,600.0), vec2(0.0), easeOutBounce(t));
+
+    float rot = mix(-3.14159,3.14159,hashSample);
+
+    vec2 pos = pixelCoords - offset;
+
+    pos.x = mod(pos.x , resolution.x);
+
+    // * 忘右边移， 上边移动
+    pos = pos - resolution * vec2(0.5,0.75);
+    pos *= rotate2D(rot);
+    pos *= size;
+
+    float star = sdStar5(pos,10.0,2.0);
+    vec3 starColour = mix(vec3(1.0),colour,smoothstep(0.0,2.0,star));
+    // * 形成一个 -0.5 ～ 15.0 边缘距离的 强度 0.2 ～ 0 的 smooth光圈
+    starColour += mix(0.2,0.0,pow(smoothstep(-5.0,15.0,star),0.25));
+
+    // * 超过0,那就会逐渐回到背景色
+    colour = mix(starColour, colour, fade);
   }
 
   const float NUM_CLOUDS = 8.0;
