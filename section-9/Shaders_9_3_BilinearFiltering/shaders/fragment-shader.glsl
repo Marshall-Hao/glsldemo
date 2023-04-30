@@ -36,24 +36,37 @@ vec4 noise(vec2 coords) {
 }
 
 vec4 filteredSample(sampler2D target, vec2 coords) {
-  vec2 texSize = vec2(2.0);
+  // * 因为4个grid
+  vec2 texSize = vec2(2.0); // * 0 0 , 2 2
+  //* get exact texture coord -0.5 ~ 1.5 btm left (-0.5, -0.5), top(1.5, 1.5)
   vec2 pc = coords * texSize - 0.5;
+  // * add back the 0.5 offset ??
   vec2 base = floor(pc) + 0.5;
 
-  vec4 s1 = texture2D(target, (base + vec2(0.0, 0.0)) / texSize);
-  vec4 s2 = texture2D(target, (base + vec2(1.0, 0.0)) / texSize);
-  vec4 s3 = texture2D(target, (base + vec2(0.0, 1.0)) / texSize);
-  vec4 s4 = texture2D(target, (base + vec2(1.0, 1.0)) / texSize);
+  // * 四个块的坐标, 然后又除以 texSize 归一了
+  vec4 s1 = texture2D(target, (base + vec2(0.0,0.0)) / texSize);
+  vec4 s2 = texture2D(target, (base + vec2(1.0,0.0)) / texSize);
+  vec4 s3 = texture2D(target, (base + vec2(0.0,1.0)) / texSize);
+  vec4 s4 = texture2D(target, (base + vec2(1.0,1.0)) / texSize);
 
-  vec2 f = smoothstep(0.0, 1.0, fract(pc));
+  vec2 f = fract(pc);
 
-  vec4 px1 = mix(s1, s2, f.x);
-  vec4 px2 = mix(s3, s4, f.x);
-  vec4 result = mix(px1, px2, f.y);
+  // * 上面两个 A-----p1--B   p那个的filter
+  vec4 px1 = mix(s1,s2, f.x);
+
+  // * 下面两个 C------p2---D p那个地方的filter
+  vec4 px2 = mix(s3,s4,f.x);
+  // *   p1
+  //*     \
+   // *    \r
+  //*      p2
+  vec4 result = mix(px1,px2, f.y);
   return result;
+
 }
 
 void main(void) {
+  // * smooth noise ,bi linear 2 * 2
   vec4 colour = noise(vUvs * 20.0);
 
   gl_FragColor = colour;

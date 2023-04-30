@@ -20,6 +20,7 @@ float remap(float v, float inMin, float inMax, float outMin, float outMax) {
 //
 // https://www.shadertoy.com/view/Xsl3Dl
 // * smooth random
+// * gradient random
 vec3 hash( vec3 p ) // replace this by something better
 {
 	p = vec3( dot(p,vec3(127.1,311.7, 74.7)),
