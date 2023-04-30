@@ -28,6 +28,7 @@ vec3 hash( vec3 p ) // replace this by something better
 	return -1.0 + 2.0*fract(sin(p)*43758.5453123);
 }
 
+// * 3d noise
 float noise( in vec3 p )
 {
   vec3 i = floor( p );
@@ -45,6 +46,7 @@ float noise( in vec3 p )
                         dot( hash( i + vec3(1.0,1.0,1.0) ), f - vec3(1.0,1.0,1.0) ), u.x), u.y), u.z );
 }
 
+// * ocataves ， persistence persistence（how fast the amplitude goes down with each objective,how much the frequency increase with each other 
 float fbm(vec3 p, int octaves, float persistence, float lacunarity) {
   float amplitude = 0.5;
   float frequency = 1.0;
@@ -153,57 +155,66 @@ float domainWarpingFBM(vec3 coords) {
 }
 
 void main() {
+  // * 让坐标的z随着时间动
   vec3 coords = vec3(vUvs * 10.0, time * 0.2);
   float noiseSample = 0.0;
 
-  // noiseSample = remap(noise(coords), -1.0, 1.0, 0.0, 1.0);
-  // noiseSample = remap(fbm(coords, 16, 0.5, 2.0), -1.0, 1.0, 0.0, 1.0);
-  // noiseSample = ridgedFBM(coords, 4, 0.5, 2.0);
-  noiseSample = turbulenceFBM(coords, 4, 0.5, 2.0);
-  // noiseSample = 1.0 - cellular(coords);
-  // noiseSample = stepped(noiseSample);
-  // noiseSample = remap(
-  //     domainWarpingFBM(coords), -1.0, 1.0, 0.0, 1.0);
+  // * noise 是 -1 到 1, 所以remap
+  // noiseSample = remap(noise(coords),-1.0,1.0,0.0,1.0);
+  // * more noise details merging
+  noiseSample = remap(fbm(coords,16,0.5,2.0),-1.0,1.0,0.0,1.0);
 
   vec3 colour = vec3(noiseSample);
 
-  vec3 pixel = vec3(0.5 / resolution, 0.0);
-
-  float s1 = turbulenceFBM(coords + pixel.xzz, 4, 0.5, 2.0);
-  float s2 = turbulenceFBM(coords - pixel.xzz, 4, 0.5, 2.0);
-  float s3 = turbulenceFBM(coords + pixel.zyz, 4, 0.5, 2.0);
-  float s4 = turbulenceFBM(coords - pixel.zyz, 4, 0.5, 2.0);
-  vec3 normal = normalize(vec3(s1 - s2, s3 - s4, 0.001));
-
-  // Hemi
-  vec3 skyColour = vec3(0.0, 0.3, 0.6);
-  vec3 groundColour = vec3(0.6, 0.3, 0.1);
-
-  vec3 hemi = mix(groundColour, skyColour, remap(normal.y, -1.0, 1.0, 0.0, 1.0));
-
-  // Diffuse lighting
-  vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
-  vec3 lightColour = vec3(1.0, 1.0, 0.9);
-  float dp = max(0.0, dot(lightDir, normal));
-
-  vec3 diffuse = dp * lightColour;
-  vec3 specular = vec3(0.0);
-
-  // Specular
-  vec3 r = normalize(reflect(-lightDir, normal));
-  float phongValue = max(0.0, dot(vec3(0.0, 0.0, 1.0), r));
-  phongValue = pow(phongValue, 32.0);
-
-  specular += phongValue;
-
-  vec3 baseColour = mix(
-    vec3(1.0, 0.25, 0.25),
-    vec3(1.0, 0.75, 0.0), smoothstep(0.0, 1.0, noiseSample));
-
-  vec3 lighting = hemi * 0.125 + diffuse * 0.5;
-
-  colour = baseColour * lighting + specular;
-  colour = pow(colour, vec3(1.0 / 2.2));
 
   gl_FragColor = vec4(colour, 1.0);
 }
+
+  // // noiseSample = remap(noise(coords), -1.0, 1.0, 0.0, 1.0);
+  // // noiseSample = remap(fbm(coords, 16, 0.5, 2.0), -1.0, 1.0, 0.0, 1.0);
+  // // noiseSample = ridgedFBM(coords, 4, 0.5, 2.0);
+  // noiseSample = turbulenceFBM(coords, 4, 0.5, 2.0);
+  // // noiseSample = 1.0 - cellular(coords);
+  // // noiseSample = stepped(noiseSample);
+  // // noiseSample = remap(
+  // //     domainWarpingFBM(coords), -1.0, 1.0, 0.0, 1.0);
+
+  // vec3 colour = vec3(noiseSample);
+
+  // vec3 pixel = vec3(0.5 / resolution, 0.0);
+
+  // float s1 = turbulenceFBM(coords + pixel.xzz, 4, 0.5, 2.0);
+  // float s2 = turbulenceFBM(coords - pixel.xzz, 4, 0.5, 2.0);
+  // float s3 = turbulenceFBM(coords + pixel.zyz, 4, 0.5, 2.0);
+  // float s4 = turbulenceFBM(coords - pixel.zyz, 4, 0.5, 2.0);
+  // vec3 normal = normalize(vec3(s1 - s2, s3 - s4, 0.001));
+
+  // // Hemi
+  // vec3 skyColour = vec3(0.0, 0.3, 0.6);
+  // vec3 groundColour = vec3(0.6, 0.3, 0.1);
+
+  // vec3 hemi = mix(groundColour, skyColour, remap(normal.y, -1.0, 1.0, 0.0, 1.0));
+
+  // // Diffuse lighting
+  // vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+  // vec3 lightColour = vec3(1.0, 1.0, 0.9);
+  // float dp = max(0.0, dot(lightDir, normal));
+
+  // vec3 diffuse = dp * lightColour;
+  // vec3 specular = vec3(0.0);
+
+  // // Specular
+  // vec3 r = normalize(reflect(-lightDir, normal));
+  // float phongValue = max(0.0, dot(vec3(0.0, 0.0, 1.0), r));
+  // phongValue = pow(phongValue, 32.0);
+
+  // specular += phongValue;
+
+  // vec3 baseColour = mix(
+  //   vec3(1.0, 0.25, 0.25),
+  //   vec3(1.0, 0.75, 0.0), smoothstep(0.0, 1.0, noiseSample));
+
+  // vec3 lighting = hemi * 0.125 + diffuse * 0.5;
+
+  // colour = baseColour * lighting + specular;
+  // colour = pow(colour, vec3(1.0 / 2.2));

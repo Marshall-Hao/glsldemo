@@ -47,12 +47,14 @@ float noise( in vec3 p )
                         dot( hash( i + vec3(1.0,1.0,1.0) ), f - vec3(1.0,1.0,1.0) ), u.x), u.y), u.z );
 }
 
+// * fractional brownian motion (movements aren't fully independent, has momentum)
 float fbm(vec3 p, int octaves, float persistence, float lacunarity) {
   float amplitude = 1.0;
   float frequency = 1.0;
   float total = 0.0;
   float normalization = 0.0;
 
+  // * noise change fast, less effect
   for (int i = 0; i < octaves; ++i) {
     float noiseValue = noise(p * frequency);
     total += noiseValue * amplitude;

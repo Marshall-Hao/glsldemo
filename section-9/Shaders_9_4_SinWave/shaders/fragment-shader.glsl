@@ -88,6 +88,7 @@ float evaluateFunction(float x) {
   y += noise(vec2(x) * frequency) * amplitude;
   y += noise(vec2(x) * frequency * 2.0) * amplitude * 0.5;
   y += noise(vec2(x) * frequency * 4.0) * amplitude * 0.25;
+  // y += sin(frequency * x) * amplitude;
 
   return y;
 }
