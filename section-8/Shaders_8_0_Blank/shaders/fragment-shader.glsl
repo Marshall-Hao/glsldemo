@@ -81,6 +81,16 @@ float sdHexagon( in vec2 p, in float r )
     return length(p)*sign(p.y);
 }
 
+mat2 rotate2D(float angle) {
+  float s = sin(angle);
+  float c = cos(angle);
+
+  return mat2(
+    c,-s,
+    s,c
+  );
+
+}
 
 vec3 red = vec3(1.0, 0.0, 0.0);
 vec3 blue = vec3(0.0, 0.0, 1.0);
@@ -103,11 +113,14 @@ void main() {
   // // * 距离在5内 才画
   // colour = mix(red,colour, step(5.0,d));
 
-  // float d = sdfBox(pixelCoords, vec2(300.0,100.0));
-  // colour = mix(red,colour,step(0.0,d));
-
-  float d = sdHexagon(pixelCoords,300.0);
+  // * 移动 x,y 距离
+  vec2 pos = pixelCoords - vec2(200.0,300.0);
+  pos *= rotate2D(time * 0.25);
+  float d = sdfBox(pos, vec2(200.0,50.0));
   colour = mix(red,colour,step(0.0,d));
+
+  // float d = sdHexagon(pixelCoords,300.0);
+  // colour = mix(red,colour,step(0.0,d));
 
   gl_FragColor = vec4(colour, 1.0);
 }
