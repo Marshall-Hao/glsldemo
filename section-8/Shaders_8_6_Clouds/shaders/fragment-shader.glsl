@@ -64,7 +64,7 @@ vec3 DrawBackground() {
   float dayTime = mod(time,dayLength);
 
   vec3 colour;
-  // * 0.25 morning 阶段 ，因为是余数，所以相当于循环，跟年月日 那样理解,四个阶段循环
+  // * 0.25 morning 阶段 ，因为是余数，所以相当于循环，跟年月日 那样理解, n(4,20)个阶段循环
   if (dayTime < dayLength * 0.25) {
     colour =mix(morning,midday, smoothstep(0.0, dayLength * 0.25, dayTime));
   } else if(dayTime < dayLength * 0.5) {
@@ -95,11 +95,56 @@ float hash(vec2 v) {
   return sin(t);
 }
 
+float saturate(float t) {
+  return clamp(t,0.0,1.0);
+}
+
+float easeOut(float x,float p) {
+  return 1.0 - pow(1.0 - x, p);
+}
+
 
 void main() {
   vec2 pixelCoords = vUvs  * resolution;
 
   vec3 colour = DrawBackground();
+
+
+  float dayLength = 20.0;
+  float dayTime = mod(time,dayLength);
+
+  // * SUN
+  if (dayTime < dayLength * 0.75) {
+    // * 根据时间平移
+    float t = saturate(inverseLerp(dayTime,0.0,1.0));
+
+
+    // * 左下角是起点 没有平移坐标系
+    vec2 offset = vec2(200.0,resolution.y * 0.8) + mix(
+      vec2(0.0,400.0),vec2(0.0),easeOut(t,5.0)
+    );
+
+    if(dayTime > dayLength * 0.5) {
+      t = saturate(inverseLerp(dayTime,dayLength*0.5, dayLength*0.5 + 1.0));
+      // * 反过来的 
+      offset = vec2(200.0, resolution.y * 0.8) + mix(vec2(0.0),vec2(0.0,400.0),t);
+
+    }
+
+    vec2 sunPos = pixelCoords - offset;
+
+    float sun = sdfCircle(sunPos, 100.0);
+    colour = mix(vec3(0.84,0.63,0.26),colour, smoothstep(0.0,1.0,sun));
+
+    float s = max(0.001,sun);
+
+    // * like phonk 到10 距离越远 数值越小，所以saturated
+    float p = saturate(exp(-0.001 * s * s));
+
+    // * 加黑色颜色不变 + 0 还是原来
+    colour +=0.5 *  mix(vec3(0.0),vec3(0.9,0.85,0.47) , p);
+  }
+
 
   const float NUM_CLOUDS = 8.0;
   // * making clouds
