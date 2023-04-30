@@ -89,6 +89,17 @@ float sdfCloud(vec2 pixelCoords) {
   return opUnion(puff1, opUnion(puff2,puff3));
 }
 
+float sdfMoon(vec2 pixelCoords) {
+  float d = opSubtraction(
+    sdfCircle(pixelCoords + vec2(50.0,0.0),80.0),
+    sdfCircle(pixelCoords,80.0)
+  );
+
+
+  return d;
+}
+
+
 float hash(vec2 v) {
   // * fake random
   float t = dot(v, vec2(36.5323,73.945));
@@ -103,6 +114,23 @@ float easeOut(float x,float p) {
   return 1.0 - pow(1.0 - x, p);
 }
 
+float easeOutBounce(float x) {
+  const float n1 = 7.5625;
+  const float d1 = 2.75;
+
+  if (x < 1.0 / d1) {
+    return n1 * x * x;
+  } else if (x < 2.0 / d1) {
+    x -= 1.5 / d1;
+    return n1 * x * x + 0.75;
+  } else if (x < 2.5 / d1) {
+    x -= 2.25 / d1;
+    return n1 * x * x + 0.9375;
+  } else {
+    x -= 2.625 / d1;
+    return n1 * x * x + 0.984375;
+  }
+}
 
 void main() {
   vec2 pixelCoords = vUvs  * resolution;
@@ -145,6 +173,42 @@ void main() {
     colour +=0.5 *  mix(vec3(0.0),vec3(0.9,0.85,0.47) , p);
   }
 
+
+    // * MOON
+  if (dayTime > dayLength * 0.5) {
+    // * 根据时间平移
+    float t = saturate(inverseLerp(dayTime,dayLength * 0.5,dayLength + 1.0));
+
+
+    // * 左下角是起点 没有平移坐标系
+    vec2 offset = resolution.y * 0.8 + mix(
+      vec2(0.0,400.0),vec2(0.0),easeOut(t,5.0)
+    );
+
+    if(dayTime > dayLength * 0.9) {
+      t = saturate(inverseLerp(dayTime,dayLength*0.9, dayLength*0.9 + 1.0));
+      // * 反过来的 
+      offset = resolution.y * 0.8 + mix(vec2(0.0),vec2(0.0,400.0),t);
+
+    }
+    
+    vec2 moonShadowPos = pixelCoords - offset + vec2(15.0);
+    moonShadowPos = rotate2D(3.14159 * -0.2) * moonShadowPos;
+    float moonShadow = sdfMoon(moonShadowPos);
+    // * blk gradient like shadow, 因为越里面，越小 越黑， 越大就越近接近背景，一种慢慢blend 感觉 gradient
+    colour = mix(vec3(0.0),colour, smoothstep(-40.0,10.0,moonShadow));
+    
+
+    vec2 moonPos = pixelCoords - offset;
+    moonPos = rotate2D(3.14159 * -0.2) * moonPos;
+
+    
+    float moon = sdfMoon(moonPos);
+    colour = mix(vec3(1.0),colour, smoothstep(0.0,1.0,moon));
+
+    float moonGlow = sdfMoon(moonPos);
+    colour += 0.1 * mix(vec3(1.0),vec3(0.0), smoothstep(-10.0,5.0, moonGlow));
+  }
 
   const float NUM_CLOUDS = 8.0;
   // * making clouds
