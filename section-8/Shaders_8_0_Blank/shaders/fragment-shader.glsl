@@ -92,6 +92,33 @@ mat2 rotate2D(float angle) {
 
 }
 
+float opUnion(float d1, float d2) {
+  return min(d1, d2);
+}
+
+float opSubtraction(float d1, float d2) {
+  return max(-d1, d2);
+}
+
+float opIntersection(float d1, float d2) {
+  return max(d1, d2);
+}
+
+float softMax(float a, float b, float k) {
+  return log(exp(k * a) + exp(k * b)) / k;
+}
+
+
+float softMin(float a, float b, float k) {
+  return -softMax(-a, -b, k);
+}
+
+float softMinValue(float a,float b,float k) {
+  // float h = remap(a - b, -1.0/k, 1.0/k, 0.0 , 1.0);
+  float h = exp(-b*k) / (exp(-a*k) + exp(-b*k));
+  return h;
+}
+
 vec3 red = vec3(1.0, 0.0, 0.0);
 vec3 blue = vec3(0.0, 0.0, 1.0);
 
@@ -105,12 +132,12 @@ void main() {
   // * 每个格子相对 100 px, linewidth 相对2px
   colour = drawGrid(colour, vec3(0.0),100.0,2.0);
 
-  float d = sdfCircle(pixelCoords,300.0);
-  //* d 小于 0 就在圆圈内， 所以step 值就是 0 ，红色
-  // * smoothstep 就可以在 距离 1.0， -1.0有个过渡，感觉更匀称， 然后 距离 《 -1。0 深一点
-  colour = mix(red * 0.5, colour, smoothstep(-1.0,1.0,d));
-  // * 距离 《 -5.0 浅一点 -1.0 ～ -5.0 深色，像是一个边缘 圆圈
-  colour = mix(red , colour, smoothstep(-5.0,0.0,d));
+  // float d = sdfCircle(pixelCoords,300.0);
+  // //* d 小于 0 就在圆圈内， 所以step 值就是 0 ，红色
+  // // * smoothstep 就可以在 距离 1.0， -1.0有个过渡，感觉更匀称， 然后 距离 《 -1。0 深一点
+  // colour = mix(red * 0.5, colour, smoothstep(-1.0,1.0,d));
+  // // * 距离 《 -5.0 浅一点 -1.0 ～ -5.0 深色，像是一个边缘 圆圈
+  // colour = mix(red , colour, smoothstep(-5.0,0.0,d));
 
   // float d = sdfLine(pixelCoords,vec2(0,0), vec2(200.0,-75.0));
   // // * 距离在5内 才画
@@ -124,6 +151,20 @@ void main() {
 
   // float d = sdHexagon(pixelCoords,300.0);
   // colour = mix(red,colour,step(0.0,d));
+
+  float box = sdfBox(rotate2D(time * 0.5) * pixelCoords, vec2(200.0,100.0));
+  float d1 = sdfCircle(pixelCoords - vec2(-300.0,-150.0),150.0);
+  float d2 = sdfCircle(pixelCoords - vec2(300.0,-150.0),150.0);
+  float d3 = sdfCircle(pixelCoords - vec2(0.0,200.0),150.0);
+  float d = opUnion(opUnion(d1,d2),d3);
+
+  // * 颜色上也自然 blend in soft color blending 
+  vec3 sdfColour = mix(red,blue, smoothstep(0.0,1.0,softMinValue(box,d,0.01)));
+  // * soft min together
+  d = softMin(box,d,0.05);
+
+  colour = mix(sdfColour * 0.5, colour, smoothstep(-1.0,1.0,d));
+  colour = mix(sdfColour , colour, smoothstep(-5.0,0.0,d));
 
   gl_FragColor = vec4(colour, 1.0);
 }
