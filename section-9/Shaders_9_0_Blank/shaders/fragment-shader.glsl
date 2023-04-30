@@ -19,6 +19,7 @@ float remap(float v, float inMin, float inMax, float outMin, float outMax) {
 // https://iquilezles.org/
 //
 // https://www.shadertoy.com/view/Xsl3Dl
+// * smooth random
 vec3 hash( vec3 p ) // replace this by something better
 {
 	p = vec3( dot(p,vec3(127.1,311.7, 74.7)),
@@ -66,8 +67,9 @@ float fbm(vec3 p, int octaves, float persistence, float lacunarity) {
 }
 
 void main() {
+  // * 移到中间
   vec2 pixelCoords = (vUvs - 0.5) * resolution;
-  vec3 colour = vec3(0.0);
+  vec3 colour = vec3(noise(vec3(pixelCoords,0.0) / 16.0));
 
   gl_FragColor = vec4(colour, 1.0);
 }
