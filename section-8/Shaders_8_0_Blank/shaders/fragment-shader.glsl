@@ -105,19 +105,22 @@ void main() {
   // * 每个格子相对 100 px, linewidth 相对2px
   colour = drawGrid(colour, vec3(0.0),100.0,2.0);
 
-  // float d = sdfCircle(pixelCoords,100.0);
-  // //* d 小于 0 就在圆圈内， 所以step 值就是 0 ，红色
-  // colour = mix(red, colour, step(0.0,d));
+  float d = sdfCircle(pixelCoords,300.0);
+  //* d 小于 0 就在圆圈内， 所以step 值就是 0 ，红色
+  // * smoothstep 就可以在 距离 1.0， -1.0有个过渡，感觉更匀称， 然后 距离 《 -1。0 深一点
+  colour = mix(red * 0.5, colour, smoothstep(-1.0,1.0,d));
+  // * 距离 《 -5.0 浅一点 -1.0 ～ -5.0 深色，像是一个边缘 圆圈
+  colour = mix(red , colour, smoothstep(-5.0,0.0,d));
 
   // float d = sdfLine(pixelCoords,vec2(0,0), vec2(200.0,-75.0));
   // // * 距离在5内 才画
   // colour = mix(red,colour, step(5.0,d));
 
   // * 移动 x,y 距离
-  vec2 pos = pixelCoords - vec2(200.0,300.0);
-  pos *= rotate2D(time * 0.25);
-  float d = sdfBox(pos, vec2(200.0,50.0));
-  colour = mix(red,colour,step(0.0,d));
+  // vec2 pos = pixelCoords - vec2(200.0,300.0);
+  // pos *= rotate2D(time * 0.25);
+  // float d = sdfBox(pos, vec2(200.0,50.0));
+  // colour = mix(red,colour,step(0.0,d));
 
   // float d = sdHexagon(pixelCoords,300.0);
   // colour = mix(red,colour,step(0.0,d));
