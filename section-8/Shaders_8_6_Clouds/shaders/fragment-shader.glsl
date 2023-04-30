@@ -35,9 +35,49 @@ mat2 rotate2D(float angle) {
 }
 
 vec3 DrawBackground() {
-  return mix(vec3(0.42,0.58,0.75),
+  vec3 morning = mix(
+  vec3(0.44,0.64,0.84),
+  vec3(0.34,0.51,0.94),
+  smoothstep(0.0,1.0,pow(vUvs.x * vUvs.y, 0.5))
+  );
+
+  vec3 midday = mix(
+  vec3(0.42,0.58,0.75),
   vec3(0.36,0.46,0.82),
-  smoothstep(0.0,1.0,pow(vUvs.x * vUvs.y, 0.5)));
+  smoothstep(0.0,1.0,pow(vUvs.x * vUvs.y, 0.5))
+  );
+
+  vec3 evening = mix(
+  vec3(0.82,0.51,0.25),
+  vec3(0.88,0.71,0.39),
+  smoothstep(0.0,1.0,pow(vUvs.x * vUvs.y, 0.5))
+  );
+
+  vec3 night = mix(
+  vec3(0.07,0.1,0.19),
+  vec3(0.19,0.2,0.29),
+  smoothstep(0.0,1.0,pow(vUvs.x * vUvs.y, 0.5))
+  );
+
+
+  float dayLength = 20.0;
+  float dayTime = mod(time,dayLength);
+
+  vec3 colour;
+  // * 0.25 morning 阶段 ，因为是余数，所以相当于循环，跟年月日 那样理解,四个阶段循环
+  if (dayTime < dayLength * 0.25) {
+    colour =mix(morning,midday, smoothstep(0.0, dayLength * 0.25, dayTime));
+  } else if(dayTime < dayLength * 0.5) {
+    colour =mix(midday,evening, smoothstep(dayLength * 0.25, dayLength * 0.5, dayTime));
+  } else if(dayTime < dayLength * 0.75) {
+    colour =mix(evening,night, smoothstep(dayLength * 0.5, dayLength * 0.75, dayTime));
+  } else {
+    colour =mix(night,morning, smoothstep(dayLength * 0.75, dayLength , dayTime));
+  }
+
+
+
+  return colour;
 }
 
 
