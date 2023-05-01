@@ -41,6 +41,7 @@ void main() {
   coords.x = remap(coords.x, 0.0,1.0,0.25,0.75);
   vec3 colour = texture2D(diffuse2,coords).xyz;
 
+  // * 因为这个还是在真实uv坐标系中， 0.5是一半
   if (vUvs.x > 0.5) {
     // * tinting
     vec3 tintColour = vec3(1.0,0.5,0.5);
@@ -51,7 +52,7 @@ void main() {
     // colour += brightnessAmount;
 
     // * saturation 曝光度
-    // * 得到灰度值
+    // * 得到灰度值 三个颜色channel的平均
     float luminance = dot(colour, vec3(1.0/3.0));
     float saturationAmount = 0.5;
     // colour = mix(vec3(luminance),colour, saturationAmount);
@@ -72,8 +73,42 @@ void main() {
     //       vec3(1.0 / contrastAmount))
     //        * 0.5 + midpoint;
 
-    // The matrix single color channel
-    colour = pow(colour, vec3(1.5,0.8,1.5));
+    // The matrix color shading
+    // colour = pow(colour, vec3(1.5,0.8,1.5));
+
+    // Color boost
+    // * set a ref color as a direction to boost ,比如这次突出红色, 绿色
+    vec3 refColour = vec3(0.72,0.72,0.25);
+    // float colourWeight = 1.0 - distance(colour,refColour);
+    // * 拿到 cos(theta) 作为一个投影值，因素
+    float colourWeight = dot(normalize(colour),normalize(refColour));
+    // * 取大一点的factor值
+    // colourWeight = smoothstep(0.45,1.0,colourWeight);
+    colourWeight = pow(colourWeight, 32.0);
+    // colour = mix(vec3(luminance),colour,colourWeight);
+
+    // * vignette 旁边blur
+    // * fract -> 0 ~ 1, 类比到中间来，memory first
+    vec2 vignetteCoords =  fract(vUvs * vec2(2.0, 1.0));
+    // vec3 vignetteAmount = texture2D(vignette,vignetteCoords).xyz;
+
+    // * vignette operator, 坐标系的转换啊 难点
+    float v1 = smoothstep(0.5,0.2,abs(vignetteCoords.x - 0.5));
+    float v2 = smoothstep(0.5,0.2,abs(vignetteCoords.y - 0.5));
+    // * exp 强度微调
+    float vignetteAmount = v1 * v2;
+    vignetteAmount = pow(vignetteAmount,0.25);
+    vignetteAmount = remap(vignetteAmount, 0.0,1.0,0.5,1.0);
+
+    // * subtle vignette only on right size,since we transfer the coord system
+    // colour *= vignetteAmount;
+
+    // * pixelation 调低分辨率
+    vec2 dims = vec2(128.0,128.0);
+    // * 转换坐标系 64 在上面simulate像素点
+    vec2 texUv = floor(coords * dims) / dims;
+    vec3 pixelated = texture2D(diffuse2,texUv).xyz;
+    colour = pixelated;
   }
 
   gl_FragColor = vec4(colour, 1.0);
