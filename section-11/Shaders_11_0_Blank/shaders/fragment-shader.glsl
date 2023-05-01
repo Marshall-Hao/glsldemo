@@ -167,10 +167,138 @@ float fbm(vec3 p, int octaves, float persistence, float lacunarity, float expone
   return total;
 }
 
+vec3 generateGridStars(vec2 pixelCoords, float starRadius, float cellWidth, float seed, bool twinkle) {
+  // * 每个cell 300px
+
+  // * 每个格子的内部坐标系统 把他们归一成 0 ～ 1
+  //* 再把中心往中间移动
+  //* 左下角 起点 0，0 黑色*/
+  vec2 cellCoords = (fract(pixelCoords /cellWidth) - 0.5) * cellWidth;
+
+  // * get the actual cell id for each uv point
+  vec2 cellID = floor(pixelCoords / cellWidth) + seed / 100.0;
+  // * random 0 ~ 1
+  vec3 cellHashValue = hash3(vec3(cellID,0.0));
+
+  // * 假定在原点
+ 
+  float starBrightness = saturate(cellHashValue.z);
+  vec2 starPosition = vec2(0.0);
+  // * 要转换 因为cellCOod 转换了·
+  starPosition += cellHashValue.xy * cellWidth * 0.5 - starRadius * -6.0;
+  // * 每个cell点距离中心点的距离
+  float distToStar = length(cellCoords - starPosition);
+  
+  // float glow = smoothstep(starRadius + 1.0, starRadius, distToStar); 
+  float glow = exp(-2.0 * distToStar / starRadius );
+
+  if (twinkle) {
+    float noiseSample = noise(vec3(cellID, time * 1.5));
+    float twinkleSIze = remap(noiseSample, -1.0,1.0,1.0,0.1) * starRadius * 6.0;
+    vec2 absDist = abs(cellCoords - starPosition);
+    // *  x方向
+    float twinkleValue = smoothstep(starRadius * 0.25, 0.0, absDist.y) *
+      smoothstep(twinkleSIze,0.0,absDist.x);
+    // * y方向
+    twinkleValue = smoothstep(starRadius * 0.2, 0.0, absDist.x) *
+      smoothstep(twinkleSIze,0.0,absDist.y);
+    glow += twinkleValue;
+  }
+
+  return vec3(glow * starBrightness);
+}
+
+vec3 generateStars(vec2 pixelCoords) {
+  vec3 stars = vec3(0.0);
+ 
+  float size = 4.0;
+  float cellWidth = 500.0;
+    for (float i = 1.0;i < 3.0; i++) {
+    stars += generateGridStars(pixelCoords,size,cellWidth,i,true);
+    // * 星星不断变小
+    size *= 0.5;
+    // * 越来越密集
+    cellWidth *= 0.35;
+  }
+
+  for (float i = 1.0;i < 5.0; i++) {
+    stars += generateGridStars(pixelCoords,size,cellWidth,i,false);
+    // * 星星不断变小
+    size *= 0.5;
+    // * 越来越密集
+    cellWidth *= 0.35;
+  }
+  
+  return stars;
+}
+
+float sdfCircle(vec2 p,float r) {
+  return length(p) - r;
+}
+
+vec3 DrawPlanet(vec2 pixelCoords,vec3 colour) {
+  float d = sdfCircle(pixelCoords, 400.0);
+  vec3 planetColour = vec3(1.0);
+  if (d <= 0.0) {
+    float x = pixelCoords.x / 400.0;
+    float y = pixelCoords.y / 400.0;
+    // * z 就是垂直于他们
+    float z = sqrt(1.0 - x*x - y*y);
+    vec3 viewNormal = vec3(x,y,z);
+    vec3 wsPosition = viewNormal;
+
+    vec3 noiseCoord = wsPosition * 2.0;
+    float noiseSample = fbm(noiseCoord, 6 ,0.5,2.0,4.0);
+
+    // * some decoration moisture
+    float moistureMap = fbm(
+      noiseCoord * 0.5 + vec3(20.0),2,0.5,2.0,1.0
+    );
+    // random noise for the colour
+    // planetColour = vec3(noiseSample);
+    // * Coloring
+    vec3 waterColour = mix(
+      vec3(0.01,0.09,0.55),
+      vec3(0.09,0.26,0.57),
+      smoothstep(0.02,0.06,noiseSample)
+    );
+    vec3 landColour = mix(
+      vec3(0.5,1.0,0.3),
+      vec3(0.0,0.7,0.0),
+      smoothstep(0.05,0.1,noiseSample)
+    );
+    // * some deep value
+    landColour = mix(
+      vec3(1.0,1.0,0.5),
+      landColour,
+      smoothstep(0.4,0.5, moistureMap)
+    );
+    //* rock
+    landColour = mix(
+      landColour, vec3(0.5),smoothstep(0.1,0.2,noiseSample)
+    );
+    landColour = mix(
+      landColour, vec3(1.0),smoothstep(0.2,0.3,noiseSample)
+    );
+    // * 上下都是学 白的
+    landColour = mix(
+      landColour, vec3(0.9),smoothstep(0.6,0.9,abs(viewNormal.y))
+    );
+
+    planetColour = mix(waterColour,landColour,smoothstep(0.05,0.06, noiseSample));
+  }
+
+  colour = mix(colour,planetColour,smoothstep(0.0,-1.0,d));
+  return colour;
+}
+
+
 void main() {
   vec2 pixelCoords = (vUvs - 0.5) * resolution;
 
   vec3 colour = vec3(0.0);
+  colour = generateStars(pixelCoords);
+  colour = DrawPlanet(pixelCoords, colour);
 
   gl_FragColor = vec4(pow(colour, vec3(1.0 / 2.2)), 1.0);
 }
