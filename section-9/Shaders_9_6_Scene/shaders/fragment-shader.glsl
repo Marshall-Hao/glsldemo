@@ -66,63 +66,56 @@ float fbm(vec3 p, int octaves, float persistence, float lacunarity) {
 }
 
 vec3 GenerateSky() {
-  vec3 colour1 = vec3(0.4, 0.6, 0.9);
-  vec3 colour2 = vec3(0.1, 0.15, 0.4);
+  vec3 colour1 = vec3(0.4,0.6,0.9);
+  vec3 colour2 = vec3(0.1,0.15,0.4);
+
   return mix(
-      colour1, colour2, smoothstep(0.875, 1.0, vUvs.y));
+    colour1,colour2,smoothstep(0.0,1.0,vUvs.y)
+  );
 }
 
-vec3 DrawMountains(
-    vec3 background, vec3 mountainColour, vec2 pixelCoords, float depth) {
+vec3 drawMountains(vec3 background, vec3 mountainColour, vec2 pixelCoords) {
   float y = fbm(
-    vec3(depth + pixelCoords.x / 256.0, 1.432, 3.643), 6, 0.5, 2.0) * 256.0;
+    vec3(pixelCoords.x / 256.0, 1.432, 3.643), 6, 0.5,2.0
+  ) * 256.0;
 
-  vec3 fogColour = vec3(0.4, 0.6, 0.9);
-  float fogFactor = smoothstep(0.0, 8000.0, depth) * 0.5;
-
-  float heightFactor = smoothstep(256.0, -512.00, pixelCoords.y);
-  heightFactor *= heightFactor;
-  fogFactor = mix(heightFactor, fogFactor, fogFactor);
-
-  mountainColour = mix(mountainColour, fogColour, fogFactor);
-
+  // * 山的形状 sdf, y方向的小于它 就在 sin 山波形内
   float sdfMountain = pixelCoords.y - y;
 
-  float blur = 1.0 + smoothstep(200.0, 6000.0, depth) * 128.0 + smoothstep(200.0, -1400.0, depth) * 128.0;
-  vec3 colour = mix(
-      mountainColour,
-      background,
-      smoothstep(0.0, blur, sdfMountain));
+  vec3 colour = mix(mountainColour, background, smoothstep(0.0,1.0,sdfMountain));
 
   return colour;
 }
 
 void main() {
+  // * 移到中点，然后转换屏幕的 resolution坐标系
   vec2 pixelCoords = (vUvs - 0.5) * resolution;
   vec3 colour = GenerateSky();
 
-  vec2 timeOffset = vec2(time * 50.0, 0.0);
-  vec2 mountainCoords = (pixelCoords - vec2(0.0, 400.0)) * 8.0 + timeOffset;
-  colour = DrawMountains(colour, vec3(0.5), mountainCoords, 6000.0);
+  vec2 timeOffset = vec2(time * 50.0, 0.0) * 0.0;
+  // * mountains
+  // * 每一frame 先画他
+  // * 因为已经 是加给那个 scaled的了， 所以速度也会有影响， 不同的scale，不同的速度
+  vec2 mountainCoords = (pixelCoords - vec2(0.0,400.0)) * 8.0 + timeOffset;
+  colour = drawMountains(colour, vec3(0.5),mountainCoords);
+  // * 再画他 所以不会影响 因为color已经固定好了
+  mountainCoords = (pixelCoords - vec2(0.0,360.0)) * 4.0 + timeOffset;
+  colour = drawMountains(colour, vec3(0.45),mountainCoords);
+ // * 乘小 除大
+  mountainCoords = (pixelCoords - vec2(0.0,280.0)) * 2.0 + timeOffset;
+  colour = drawMountains(colour, vec3(0.4),mountainCoords);
 
-  mountainCoords = (pixelCoords - vec2(0.0, 360.0)) * 4.0 + timeOffset;
-  colour = DrawMountains(colour, vec3(0.45), mountainCoords, 3200.0);
+  mountainCoords = (pixelCoords - vec2(0.0,150.0)) * 1.0 + timeOffset;
+  colour = drawMountains(colour, vec3(0.35),mountainCoords);
 
-  mountainCoords = (pixelCoords - vec2(0.0, 280.0)) * 2.0 + timeOffset;
-  colour = DrawMountains(colour, vec3(0.4), mountainCoords, 1600.0);
+  mountainCoords = (pixelCoords - vec2(0.0,-100.0)) * 0.5 + timeOffset;
+  colour = drawMountains(colour, vec3(0.3),mountainCoords);
 
-  mountainCoords = (pixelCoords - vec2(0.0, 150.0)) * 1.0 + timeOffset;
-  colour = DrawMountains(colour, vec3(0.35), mountainCoords, 800.0);
+  mountainCoords = (pixelCoords - vec2(0.0,-500.0)) * 0.7 + timeOffset;
+  colour = drawMountains(colour, vec3(0.25),mountainCoords);
 
-  mountainCoords = (pixelCoords - vec2(0.0, -100.0)) * 0.5 + timeOffset;
-  colour = DrawMountains(colour, vec3(0.3), mountainCoords, 400.0);
-
-  mountainCoords = (pixelCoords - vec2(0.0, -500.0)) * 0.25 + timeOffset;
-  colour = DrawMountains(colour, vec3(0.25), mountainCoords, 200.0);
-
-  mountainCoords = (pixelCoords - vec2(0.0, -1400.0)) * 0.125 + timeOffset;
-  colour = DrawMountains(colour, vec3(0.2), mountainCoords, 0.0);
-
+  mountainCoords = (pixelCoords - vec2(0.0,-1400.0)) * 0.3 + timeOffset;
+  colour = drawMountains(colour, vec3(0.2),mountainCoords);
   gl_FragColor = vec4(colour, 1.0);
 }
 
