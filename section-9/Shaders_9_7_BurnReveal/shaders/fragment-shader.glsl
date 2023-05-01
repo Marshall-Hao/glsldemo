@@ -75,18 +75,44 @@ float sdfCircle(vec2 p, float r) {
 
 void main() {
   vec2 pixelCoords = (vUvs - 0.5) * resolution;
+  
 
-  vec3 sample1 = texture2D(diffuse1,vUvs).xyz;
+  float noiseSample = fbm(vec3(pixelCoords,0.0) * 0.005, 4, 0.5,2.0);
+  // *  因为转为resolution坐标系了
+  float size = smoothstep(0.0,15.0,time) * (50.0  + length(resolution) * 0.5);
+  float d = sdfCircle(pixelCoords + 50.0 * noiseSample,size);
+
+  // * 因为要 作用在 uv坐标系，所以转换回
+  vec2 distortion = noiseSample / resolution;
+  // * how far the we allow the distortion from the edge, 一点twisting
+  vec2 uvDistortion = distortion * 10.0 * smoothstep(80.0,20.0,d);
+
+  // * 产生 一个 每个点移动的效果 所以是加上， 因为移动了 感觉产生了扭动，往左边移动，往下移动了
+  vec3 sample1 = texture2D(diffuse1,vUvs + uvDistortion).xyz;
   vec3 sample2 = texture2D(diffuse2,vUvs).xyz;
 
   vec3 colour = sample1;
 
-  // *  因为转为resolution坐标系了
-  float size = smoothstep(0.0,15.0,time) * length(resolution) * 0.5;
-  float d = sdfCircle(pixelCoords,size);
+
+  // * dark burning effect
+  // * make a circle only
+  float burnAmount = 1.0 - exp(-d*d*0.001);
+  // * 小于-40 是本身， 大于40 也是本身，中间就是一层圈 -40～ 40的一个漩涡圈
+  colour = mix(vec3(0.0), colour, burnAmount);
+
+  vec3 FIRE_COLOUR = vec3(1.0,0.5,0.2);
+  float orangeAmount = smoothstep(0.0,10.0,d);
+  orangeAmount = pow(orangeAmount,0.25);
+  colour = mix(FIRE_COLOUR,colour,orangeAmount);
 
   // * size 逐渐变大， d就逐渐变下，因为都在园里面， 所以就不断接近sample2
   colour = mix(sample2,colour,smoothstep(0.0,1.0,d));
+
+  // * add a fiery glow abs,both sides
+  float glowAmount = smoothstep(0.0,32.0,abs(d));
+  glowAmount = 1.0 - pow(glowAmount,0.125);
+  // * 加一层光圈
+  colour += glowAmount * vec3(1.0,0.2,0.05);
 
   gl_FragColor = vec4(colour, 1.0);
 }
