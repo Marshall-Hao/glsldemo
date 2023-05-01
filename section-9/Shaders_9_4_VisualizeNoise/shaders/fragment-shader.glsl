@@ -74,6 +74,7 @@ float ridgedFBM(vec3 p, int octaves, float persistence, float lacunarity) {
 
   for (int i = 0; i < octaves; ++i) {
     float noiseValue = noise(p * frequency);
+    // * get absolute value
     noiseValue = abs(noiseValue);
     noiseValue = 1.0 - noiseValue;
 
@@ -98,7 +99,7 @@ float turbulenceFBM(vec3 p, int octaves, float persistence, float lacunarity) {
   for (int i = 0; i < octaves; ++i) {
     float noiseValue = noise(p * frequency);
     noiseValue = abs(noiseValue);
-
+    // * dont 1 - ; invertred; organic looking
     total += noiseValue * amplitude;
     normalization += amplitude;
     amplitude *= persistence;
@@ -111,19 +112,26 @@ float turbulenceFBM(vec3 p, int octaves, float persistence, float lacunarity) {
 }
 
 float cellular(vec3 coords) {
+  // * 找到 那个点 处在的cell的边界
   vec2 gridBasePosition = floor(coords.xy);
+  // * 那个点在那个cell的偏移量
   vec2 gridCoordOffset = fract(coords.xy);
 
   float closest = 1.0;
+  // * 2层layer 可自定义
+  // * 2 * 2 附近四个
   for (float y = -2.0; y <= 2.0; y += 1.0) {
     for (float x = -2.0; x <= 2.0; x += 1.0) {
       vec2 neighbourCellPosition = vec2(x, y);
+      // * 两个cell组合一下
       vec2 cellWorldPosition = gridBasePosition + neighbourCellPosition;
+      // * sample noise two 2 times
       vec2 cellOffset = vec2(
         noise(vec3(cellWorldPosition, coords.z) + vec3(243.432, 324.235, 0.0)),
         noise(vec3(cellWorldPosition, coords.z))
       );
-
+      
+      // * 要画图来看
       float distToNeighbour = length(
           neighbourCellPosition + cellOffset - gridCoordOffset);
       closest = min(closest, distToNeighbour);
@@ -135,21 +143,29 @@ float cellular(vec3 coords) {
 
 float stepped(float noiseSample) {
   float steppedSample = floor(noiseSample * 10.0) / 10.0;
+  // * get fraction
   float remainder = fract(noiseSample * 10.0);
+  // * get rid of the fraction
   steppedSample = (steppedSample - remainder) * 0.5 + 0.5;
+  //* 变成 0 or 1
   return steppedSample;
 }
 
+// * noise sample
 float domainWarpingFBM(vec3 coords) {
+  // * fbm combinenation
+  // * noise offset
   vec3 offset = vec3(
     fbm(coords, 4, 0.5, 2.0),
+    // * some offset
     fbm(coords + vec3(43.235, 23.112, 0.0), 4, 0.5, 2.0), 0.0);
-  float noiseSample = fbm(coords + offset, 1, 0.5, 2.0);
+  // float noiseSample = fbm(coords + offset, 1, 0.5, 2.0);
 
+  // * noise offset
   vec3 offset2 = vec3(
     fbm(coords + 4.0 * offset + vec3(5.325, 1.421, 3.235), 4, 0.5, 2.0),
     fbm(coords + 4.0 * offset + vec3(4.32, 0.532, 6.324), 4, 0.5, 2.0), 0.0);
-  noiseSample = fbm(coords + 4.0 * offset2, 1, 0.5, 2.0);
+  float noiseSample = fbm(coords + 4.0 * offset2, 1, 0.5, 2.0);
 
   return noiseSample;
 }
@@ -162,11 +178,67 @@ void main() {
   // * noise 是 -1 到 1, 所以remap
   // noiseSample = remap(noise(coords),-1.0,1.0,0.0,1.0);
   // * more noise details merging
-  noiseSample = remap(fbm(coords,16,0.5,2.0),-1.0,1.0,0.0,1.0);
+  // noiseSample = remap(fbm(coords,16,0.5,2.0),-1.0,1.0,0.0,1.0);
+  // * rigidFBM noise 都是大于0的，不用remap
+  // noiseSample =  ridgedFBM(coords, 4, 0.5,2.0);
 
+  noiseSample =  turbulenceFBM(coords, 4, 0.5,2.0);
+
+
+  // * like organic cell
+  // noiseSample =1.0 - cellular(coords);
+  // noiseSample = stepped(noiseSample); // * like wood
+  // * like liquid metal
+  // noiseSample += remap(domainWarpingFBM(coords),-1.0,1.0,0.0,1.0);
+  // * more noise details merging
   vec3 colour = vec3(noiseSample);
 
+  // * four samples each direction, get the width of a pixel, 4大块, 一块就0.5 宽高 uv坐标里
+  // * 这个可以得到屏幕res坐标系里 每一小块占多少pixel
+  vec3 pixel = vec3(0.5 / resolution, 0.0);
 
+  // * 每个点上下左右一个pixel的噪声 noise
+  // * 左边的 xzz (x,0,0)
+  float s1 = turbulenceFBM(coords + pixel.xzz,4 ,0.5,2.0);
+  // * 右边的
+  float s2 = turbulenceFBM(coords - pixel.xzz,4 ,0.5,2.0);
+  // * 下边的
+  float s3 = turbulenceFBM(coords + pixel.zyz,4 ,0.5,2.0);
+ // * 上边的
+  float s4 = turbulenceFBM(coords - pixel.zyz,4 ,0.5,2.0);
+  // * 每个点 的 normal noise
+  vec3 normal = normalize(vec3(s1 - s2, s3 - s4, 0.001));
+  // * Hemi
+  vec3 skyColour = vec3(0.0, 0.3, 0.6);
+  vec3 groundColour = vec3(0.6, 0.3, 0.1);
+
+  //* 光打在3d噪声上
+  vec3 hemi = mix(groundColour, skyColour, remap(normal.y, -1.0, 1.0, 0.0, 1.0));
+
+  // * Diffuse lighting 光打在 3d噪声上
+  vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+  vec3 lightColour = vec3(1.0, 1.0, 0.9);
+  float dp = max(0.0, dot(lightDir, normal));
+
+  vec3 diffuse = dp * lightColour;
+  vec3 specular = vec3(0.0);
+
+  // * Specular 光打在 3d噪声上
+  vec3 r = normalize(reflect(-lightDir, normal));
+  float phongValue = max(0.0, dot(vec3(0.0, 0.0, 1.0), r));
+  phongValue = pow(phongValue, 32.0);
+
+  specular += phongValue;
+
+  vec3 baseColour = mix(
+    vec3(1.0, 0.25, 0.25),
+    vec3(1.0, 0.75, 0.0), smoothstep(0.0, 1.0, noiseSample));
+
+  vec3 lighting = hemi * 0.125 + diffuse * 0.5;
+
+  colour = baseColour * lighting + specular;
+  colour = pow(colour,vec3(1.0/2.2));
+  // * normal noise feel
   gl_FragColor = vec4(colour, 1.0);
 }
 
