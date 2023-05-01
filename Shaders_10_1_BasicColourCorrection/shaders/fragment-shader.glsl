@@ -108,7 +108,31 @@ void main() {
     // * 转换坐标系 64 在上面simulate像素点
     vec2 texUv = floor(coords * dims) / dims;
     vec3 pixelated = texture2D(diffuse2,texUv).xyz;
-    colour = pixelated;
+    // colour = pixelated;
+
+    //* Ripples x get compressed, y stretched out
+    // vec2 pushedCoords = coords;
+    // float pushedSign = sign(pushedCoords.y - 0.5);
+    // // * 很像contrast 只是 y axis
+    // pushedCoords.y = pushedSign * pow(
+    //   abs(pushedCoords.y - 0.5) * 2.0,0.7
+    // ) * 0.5 + 0.5;
+    // colour = texture2D(diffuse2,pushedCoords).xyz;
+
+
+    // * both axes ripples
+    // * 右边的每个点 距离中心点的距离 （0.5，0.5）
+    float distToCenter = length(coords - 0.5);
+    //* 画图就理解了 沿着一个方向走 就是 -1 ～ 1的变换， 每个方向组合在一起 就是一个一个的圆圈
+    float d = sin(distToCenter * 50.0 - time * 2.0);
+    // * 方向
+    vec2 dir = normalize(coords - 0.5);
+    vec2 rippleCoords = coords + d * dir * 0.05;
+    colour = texture2D(diffuse2,rippleCoords).xyz;
+
+
+
+
   }
 
   gl_FragColor = vec4(colour, 1.0);
