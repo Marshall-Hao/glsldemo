@@ -76,32 +76,17 @@ float sdfCircle(vec2 p, float r) {
 void main() {
   vec2 pixelCoords = (vUvs - 0.5) * resolution;
 
-  float noiseSample = fbm(vec3(pixelCoords, 0.0) * 0.005, 4, 0.5, 2.0);
-  float size = smoothstep(0.0, 15.0, time) * (50.0 + length(resolution) * 0.5);
-  float d = sdfCircle(pixelCoords + 50.0 * noiseSample, size);
+  vec3 sample1 = texture2D(diffuse1,vUvs).xyz;
+  vec3 sample2 = texture2D(diffuse2,vUvs).xyz;
 
-  vec2 distortion = noiseSample / resolution;
-  vec2 uvDistortion = distortion * 20.0 * smoothstep(80.0, 20.0, d);
-
-  vec3 sample1 = texture2D(diffuse1, vUvs + uvDistortion).xyz;
-  vec3 sample2 = texture2D(diffuse2, vUvs).xyz;
   vec3 colour = sample1;
 
-  // Create the dark burning effect
-  float burnAmount = 1.0 - exp(-d*d*0.001);
-  colour = mix(vec3(0.0), colour, burnAmount);
+  // *  因为转为resolution坐标系了
+  float size = smoothstep(0.0,15.0,time) * length(resolution) * 0.5;
+  float d = sdfCircle(pixelCoords,size);
 
-  vec3 FIRE_COOLOUR = vec3(1.00, 0.5, 0.2);
-  float orangeAmount = smoothstep(0.0, 10.0, d);
-  orangeAmount = pow(orangeAmount, 0.25);
-  colour = mix(FIRE_COOLOUR, colour, orangeAmount);
-
-  colour = mix(sample2, colour, smoothstep(0.0, 1.0, d));
-
-  // Add a fiery glow
-  float glowAmount = smoothstep(0.0, 32.0, abs(d));
-  glowAmount = 1.0 - pow(glowAmount, 0.125);
-  colour += glowAmount * vec3(1.0, 0.2, 0.05);
+  // * size 逐渐变大， d就逐渐变下，因为都在园里面， 所以就不断接近sample2
+  colour = mix(sample2,colour,smoothstep(0.0,1.0,d));
 
   gl_FragColor = vec4(colour, 1.0);
 }
