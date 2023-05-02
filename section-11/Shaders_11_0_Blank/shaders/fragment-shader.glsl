@@ -153,7 +153,7 @@ float fbm(vec3 p, int octaves, float persistence, float lacunarity, float expone
   float normalization = 0.0;
 
   for (int i = 0; i < octaves; ++i) {
-    float noiseValue = noise(p * frequency);
+    float noiseValue = snoise(p * frequency).w;
     total += noiseValue * amplitude;
     normalization += amplitude;
     amplitude *= persistence;
@@ -236,6 +236,33 @@ float sdfCircle(vec2 p,float r) {
   return length(p) - r;
 }
 
+float map(vec3 pos) {
+  return fbm(pos,6,0.5,2.0,4.0);
+}
+
+
+vec3 calcNormal(vec3 pos, vec3 n) {
+  vec2 e = vec2(0.0001, 0.0);
+  // * calculates the normal vector at a given position pos on the height map using a finite difference approximation.
+  // * n 是wsNormal,那个点的方向，然后在那个点的方向加一些noise height map, 模拟一种吐出来的texture感觉
+  return normalize(
+    n + -500.0 * vec3(
+      map(pos + e.xyy) - map(pos - e.xyy),
+      map(pos + e.yxy) - map(pos - e.yxy),
+      map(pos + e.yxy) - map(pos - e.xyy)
+    )
+  );
+}
+
+mat3 rotateY(float radians) {
+  float s = sin(radians);
+  float c = cos(radians);
+  return mat3(
+      c, 0.0, s,
+      0.0, 1.0, 0.0,
+      -s, 0.0, c);
+}
+
 vec3 DrawPlanet(vec2 pixelCoords,vec3 colour) {
   float d = sdfCircle(pixelCoords, 400.0);
   vec3 planetColour = vec3(1.0);
@@ -244,11 +271,21 @@ vec3 DrawPlanet(vec2 pixelCoords,vec3 colour) {
     float y = pixelCoords.y / 400.0;
     // * z 就是垂直于他们
     float z = sqrt(1.0 - x*x - y*y);
+    // * simulate rotation
+    // * uv 是只有 正面
+    // * 理解就是沿着y axis 转 只是 uv 一个planet geometryc ,可通过orbitcontrol验证
+    mat3 planetRotation = rotateY(time * 0.1);
+    // * 星球每个uv坐标点的垂直向量
     vec3 viewNormal = vec3(x,y,z);
-    vec3 wsPosition = viewNormal;
-
+    vec3 wsPosition =planetRotation * viewNormal;
+    // * 那个点的方向
+    vec3 wsNormal =planetRotation * normalize(wsPosition);
+    // *  world space 视线点
+    vec3 wsViewDir =planetRotation * vec3(0.0,0.0,1.0);
+    // * 通过z 与 noise的结合 模拟 出 凸出来的感觉
     vec3 noiseCoord = wsPosition * 2.0;
-    float noiseSample = fbm(noiseCoord, 6 ,0.5,2.0,4.0);
+    // * 每个点的 noise感觉都不一样
+    float noiseSample = fbm(noiseCoord, 6, 0.5, 2.0, 4.0);
 
     // * some decoration moisture
     float moistureMap = fbm(
@@ -267,7 +304,7 @@ vec3 DrawPlanet(vec2 pixelCoords,vec3 colour) {
       vec3(0.0,0.7,0.0),
       smoothstep(0.05,0.1,noiseSample)
     );
-    // * some deep value
+    // * some deep  texture value
     landColour = mix(
       vec3(1.0,1.0,0.5),
       landColour,
@@ -286,9 +323,70 @@ vec3 DrawPlanet(vec2 pixelCoords,vec3 colour) {
     );
 
     planetColour = mix(waterColour,landColour,smoothstep(0.05,0.06, noiseSample));
+
+    // * Lighting ws = world space
+
+    //* for specular phone since the intensity will related to the noise height map, not hard code number
+    vec2 specParams = mix(
+      vec2(0.5,32.0),
+      vec2(0.01,2.0),
+      smoothstep(0.05,0.06,noiseSample)
+    );
+    // * 只是拿到direction 所以归一
+    vec3 wsLightDir =planetRotation *  normalize(vec3(0.5,1.0,0.5));
+    // * 拿到 噪音height map,每个噪音的点，和 每个点的方向 为了更好的textur灯光
+    vec3 wsSurfaceNormal = calcNormal(noiseCoord, wsNormal);
+    // vec3 wsSurfaceposition = wsPosition + wsNormal * noiseSample * 0.1;
+    // vec3 wsSurfaceNormal =  normalize(
+    //   cross(dFdx(wsSurfaceposition), dFdy(wsSurfaceposition))
+    // );
+    // * more detailed light trick
+    float wrap = 0.05;
+    float dp = max(0.0, (dot(wsLightDir, wsSurfaceNormal) + wrap) / (1.0 + wrap));
+
+    vec3 lightColour = mix(
+      vec3(0.25,0.0,0.0),
+      vec3(0.75),
+      smoothstep(0.05,0.5,dp)
+    );
+    vec3 ambient = vec3(0.002);
+    vec3 diffuse = lightColour * dp;
+
+    vec3 r = normalize(reflect(-wsLightDir,wsSurfaceNormal));
+    float phongValue = max(0.0,dot(wsViewDir,r));
+
+    phongValue = pow(phongValue,specParams.y);
+
+    vec3 specular = vec3(phongValue) * specParams.x * diffuse;
+
+    vec3 planetShading = planetColour * (diffuse + ambient) + specular;
+    planetColour = planetShading;
+
+
+    // * fresnel 周围一圈光晕
+    float fresnel = smoothstep(1.0,0.0,viewNormal.z);
+    fresnel = pow(fresnel,8.0) * dp;
+    planetColour = mix(planetColour , vec3(0.0,0.5,1.0),fresnel);
   }
 
   colour = mix(colour,planetColour,smoothstep(0.0,-1.0,d));
+  
+  if (d < 40.0 &&  d >= -1.0) {
+    float x  = pixelCoords.x / 440.0;
+    float y = pixelCoords.y / 440.0;
+    float z = sqrt(1.0 - x * x - y * y);
+    // * 已经除以过440了，所以length就为 1 方向值
+    vec3 normal =  vec3(x,y,z);
+
+    // * 光线方向 和 垂直线的夹角光线强度 dp
+    float lighting = dot(normal,normalize(vec3(0.5,1.0,0.5)));
+    lighting = smoothstep(-0.15,1.0,lighting);
+
+    vec3 glowColour = vec3(0.05,0.3,0.9) * exp(-0.01*d*d) * lighting * 0.75;
+
+    colour += glowColour;
+  } 
+  
   return colour;
 }
 
