@@ -1,0 +1,10 @@
+Language: Cpp  # Treat the GLSL files as C++ for formatting purposes
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+BreakBeforeBraces: Attach  # Keeps the opening brace on the same line
+AllowShortIfStatementsOnASingleLine: false
+PointerAlignment: Left
+IncludeBlocks: Preserve  # Preserves the formatting of include blocks
+ColumnLimit: 0  # Disables line breaking
